@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>  
+<head>
+    <title>Expense Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the Expense Manager!</h1>
+        {% if contacts %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Money to Settle</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contact in contacts %}
+                <tr>
+                    <td>{{ contact.name }}</td>
+                    <td>{{ contact.phone }}</td>
+                    <td class="{{ 'negative' if contact.expense < 0 else 'positive' }}">
+                        {{ "%.2f"|format(contact.expense) }}
+                        <span class="edit-icon" onclick="editExpense('{{ contact.phone }}','{{ contact.name }}', '{{ contact.expense }}')">✏️</span>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No contacts found.</p>
+    {% endif %}
+        <button onclick="addContact()">Add Contact</button>
+    </div>
+
+    <script>
+        function editExpense(phone,contactName,contactExpense) {
+            const newExpense = prompt("Enter new expense for " + phone + ":");
+            if (newExpense === null) return;
+
+            const payer = prompt("Who owes the money?");
+            let expenseAmount = parseFloat(newExpense);
+
+            if (isNaN(expenseAmount)) {
+                alert("Please enter a valid number.");
+                return;
+            }
+
+            if (payer !== contactName) {
+                expenseAmount = -expenseAmount;
+            }
+            fetch("/modify", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ phone: phone, nexpense: expenseAmount })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message || data.error);
+                if(data.message){
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("Something went wrong.");
+            });
+        }
+        function addContact() {
+            const name = prompt("Enter Name:");
+            if (!name) return alert("Name is required.");
+
+            const phone = prompt("Enter Phone Number:");
+            if (!phone) return alert("Phone number is required.");
+
+            fetch("/addcontact", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ name: name, phone: phone })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message || data.error);
+                if(data.message){
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("Something went wrong.");
+            });
+        }
+    </script>
+</body>
+</html>
